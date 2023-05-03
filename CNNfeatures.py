@@ -138,7 +138,7 @@ if __name__ == "__main__":
     torch.utils.backcompat.broadcast_warning.enabled = True
 
     if args.database == 'KoNViD-1k':
-        videos_dir = '/home/ldq/Downloads/KoNViD-1k/'  # videos dir
+        videos_dir = 'dataset/KoNViD_1k_videos/'  # videos dir
         features_dir = 'CNN_features_KoNViD-1k/'  # features dir
         datainfo = 'data/KoNViD-1kinfo.mat'  # database info: video_names, scores; video format, width, height, index, ref_ids, max_len, etc.
     if args.database == 'CVD2014':
