@@ -92,7 +92,7 @@ def global_std_pool2d(x):
 
 def get_features(video_data, frame_batch_size=64, device='cuda'):
     """feature extraction"""
-    extractor = ResNet50().to(device)
+    extractor = ResNet50().to(device)    # 使用ImgNet预训练
     video_length = video_data.shape[0]
     frame_start = 0
     frame_end = frame_start + frame_batch_size
