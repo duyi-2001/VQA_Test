@@ -70,9 +70,17 @@ class ResNet50(torch.nn.Module):
     """Modified ResNet50 for feature extraction"""
     def __init__(self):
         super(ResNet50, self).__init__()
-        self.features = nn.Sequential(*list(models.resnet50(pretrained=True).children())[:-2])
+        pretrained_weights_path = 'CSPT_pretrained.pth'
+        pretrained_model = torch.load(pretrained_weights_path)
+        self.features = nn.Sequential(*list(models.resnet50(pretrained=True).children())[:-2])  # 此处由 ImageNet 预训练
+        self.features = nn.Sequential(*list(pretrained_model.children())[:-2])  # 此处改为由 CSPT 作为预训练模型
+        # print('ImageNet pretrained')
+        print('CSPT pretrained')
         for p in self.features.parameters():
             p.requires_grad = False
+
+
+        print('end init')
 
     def forward(self, x):
         # features@: 7->res5c
@@ -142,9 +150,13 @@ if __name__ == "__main__":
         features_dir = 'CNN_features_KoNViD-1k/'  # features dir
         datainfo = 'data/KoNViD-1kinfo.mat'  # database info: video_names, scores; video format, width, height, index, ref_ids, max_len, etc.
     if args.database == 'CVD2014':
-        videos_dir = '/media/ldq/Research/Data/CVD2014/'
+        videos_dir = 'dataset/CVD2014/'
         features_dir = 'CNN_features_CVD2014/'
         datainfo = 'data/CVD2014info.mat'
+    # if args.database == 'CVD2014':
+    #     videos_dir = 'dataset/CVD2014/'
+    #     features_dir = 'CNN_features_CVD2014/'
+    #     datainfo = 'data/CVD2014info.mat'
     if args.database == 'LIVE-Qualcomm':
         videos_dir = '/media/ldq/Others/Data/12.LIVE-Qualcomm Mobile In-Capture Video Quality Database/'
         features_dir = 'CNN_features_LIVE-Qualcomm/'

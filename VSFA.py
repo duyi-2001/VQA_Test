@@ -181,6 +181,7 @@ if __name__ == "__main__":
 
     model = VSFA().to(device)  #
 
+
     if not os.path.exists('models'):
         os.makedirs('models')
     trained_model_file = 'models/{}-{}-EXP{}'.format(args.model, args.database, args.exp_id)
