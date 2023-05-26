@@ -5,6 +5,7 @@
 # 
 # CUDA_VISIBLE_DEVICES=0 python CNNfeatures.py --database=KoNViD-1k --frame_batch_size=64
 # CUDA_VISIBLE_DEVICES=1 python CNNfeatures.py --database=CVD2014 --frame_batch_size=32
+# CUDA_VISIBLE_DEVICES=0 python CNNfeatures.py --database=LIVE-VQC --frame_batch_size=16
 # CUDA_VISIBLE_DEVICES=0 python CNNfeatures.py --database=LIVE-Qualcomm --frame_batch_size=8
 
 import torch
@@ -70,16 +71,16 @@ class ResNet50(torch.nn.Module):
     """Modified ResNet50 for feature extraction"""
     def __init__(self):
         super(ResNet50, self).__init__()
-        pretrained_weights_path = 'CSPT_pretrained.pth'
-        pretrained_model = torch.load(pretrained_weights_path)
-        self.features = nn.Sequential(*list(models.resnet50(pretrained=True).children())[:-2])  # 此处由 ImageNet 预训练
-        self.features = nn.Sequential(*list(pretrained_model.children())[:-2])  # 此处改为由 CSPT 作为预训练模型
-        # print('ImageNet pretrained')
+        # 更换预训练模型为 CSPT
+        pretrained_dict = torch.load('CSPT_pretrained.pth')
         print('CSPT pretrained')
+        self.features = nn.Sequential(*list(pretrained_dict.children()))
+
+        # self.features = nn.Sequential(*list(models.resnet50(weights=True).children())[:-2])  # 此处由 ImageNet 预训练
+        # print('ImageNet pretrained')
+
         for p in self.features.parameters():
             p.requires_grad = False
-
-
         print('end init')
 
     def forward(self, x):
@@ -153,10 +154,10 @@ if __name__ == "__main__":
         videos_dir = 'dataset/CVD2014/'
         features_dir = 'CNN_features_CVD2014/'
         datainfo = 'data/CVD2014info.mat'
-    # if args.database == 'CVD2014':
-    #     videos_dir = 'dataset/CVD2014/'
-    #     features_dir = 'CNN_features_CVD2014/'
-    #     datainfo = 'data/CVD2014info.mat'
+    if args.database == 'LIVE-VQC':
+        videos_dir = 'dataset/LIVE Video Quality Challenge(VQC)Database/Video/'
+        features_dir = 'CNN_features_LIVE-VQC/'
+        datainfo = 'data/LIVE-VQCinfo.mat'
     if args.database == 'LIVE-Qualcomm':
         videos_dir = '/media/ldq/Others/Data/12.LIVE-Qualcomm Mobile In-Capture Video Quality Database/'
         features_dir = 'CNN_features_LIVE-Qualcomm/'
