@@ -1,8 +1,4 @@
-"""Extracting Content-Aware Perceptual Features using Pre-Trained ResNet-50"""
-# Author: Dingquan Li
-# Email: dingquanli AT pku DOT edu DOT cn
-# Date: 2018/3/27
-# 
+
 # CUDA_VISIBLE_DEVICES=0 python CNNfeatures.py --database=KoNViD-1k --frame_batch_size=64
 # CUDA_VISIBLE_DEVICES=1 python CNNfeatures.py --database=CVD2014 --frame_batch_size=32
 # CUDA_VISIBLE_DEVICES=0 python CNNfeatures.py --database=LIVE-VQC --frame_batch_size=16
@@ -73,7 +69,7 @@ class ResNet50(torch.nn.Module):
         super(ResNet50, self).__init__()
         # 更换预训练模型为 CSPT
         pretrained_dict = torch.load('CSPT_pretrained.pth')
-        print('CSPT pretrained')
+        # print('CSPT pretrained')
         self.features = nn.Sequential(*list(pretrained_dict.children()))
 
         # self.features = nn.Sequential(*list(models.resnet50(weights=True).children())[:-2])  # 此处由 ImageNet 预训练

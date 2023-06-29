@@ -1,3 +1,7 @@
+import json
+import os
+
+import requests
 from flask import Flask, jsonify, request
 import torch
 from torchvision import transforms
@@ -9,25 +13,35 @@ from CNNfeatures import get_features
 from argparse import ArgumentParser
 import time
 
-
-
 app = Flask(__name__)
+
+
+def get_file(file_url):
+    # 临时文件夹
+    if (not os.path.exists('temp')):
+        os.mkdir('temp')
+    filename = 'temp/' + file_url.split('/')[-1]
+
+    # 从通过http获取图片
+    proxies = {"http": None, "https": None}
+    req = requests.get(file_url, verify=False, proxies=proxies)
+    # 保存文件
+    with open(filename, 'wb') as f:
+        f.write(req.content)
+    return filename
 
 
 @app.route('/inference', methods=['POST'])
 def inference():
     params = request.get_json()
     file_url = params['fileUrl']
-
-    # todo 这里需要从请求中获取
-    file_url = ''
     # 把视频文件下载到本地临时文件夹
     # 目录存在/创建
     # 下载文件
     # ToDo 返回的是一个文件在本地的路径
 
     # 视频路径
-    video_path = ''
+    video_path = get_file(file_url)
 
     # 推理过程
 
@@ -35,7 +49,7 @@ def inference():
     video_format = 'RGB'  # video format: RGB or YUV420
     video_width = None
     video_height = None
-    frame_batch_size = 32
+    frame_batch_size = 16
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     start = time.time()
@@ -82,14 +96,24 @@ def inference():
 
     end = time.time()
 
-    print('Time: {} s'.format())
+    # print('Time: {} s'.format())
 
     # 结果转换成json格式
 
-    result = {}
-    result['length'] = end - start
-    result['score'] = y_pred
-    return jsonify(result)
+    print('Time: {} s'.format(end - start))
+    print('Predicted quality: {}'.format(y_pred))
+
+    # 将y_pred转换成float类型并保留两位小数
+    y_pred = float(y_pred)
+    y_pred = "{:.2f}".format(y_pred * 100)
+
+    # 计算视频长度并保留两位小数
+    length = end - start
+    length = "{:.2f}".format(length)
+
+    result = {'length': length, 'score': y_pred}
+    return json.dumps(result)
+
 
 if __name__ == '__main__':
     app.run()

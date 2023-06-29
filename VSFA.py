@@ -1,12 +1,3 @@
-"""Quality Assessment of In-the-Wild Videos, ACM MM 2019"""
-#
-# Author: Dingquan Li
-# Email: dingquanli AT pku DOT edu DOT cn
-# Date: 2019/11/8
-#
-# tensorboard --logdir=logs --port=6006
-# CUDA_VISIBLE_DEVICES=1 python VSFA.py --database=KoNViD-1k --exp_id=0
-
 from argparse import ArgumentParser
 import os
 import h5py
@@ -54,7 +45,7 @@ class ANN(nn.Module):
 
     def forward(self, input):
         input = self.fc0(input)  # linear
-        for i in range(self.n_ANNlayers-1):  # nonlinear
+        for i in range(self.n_ANNlayers - 1):  # nonlinear
             input = self.fc(self.dropout(F.relu(input)))
         return input
 
@@ -62,7 +53,7 @@ class ANN(nn.Module):
 def TP(q, tau=12, beta=0.5):
     """subjectively-inspired temporal pooling"""
     q = torch.unsqueeze(torch.t(q), 0)
-    qm = -float('inf')*torch.ones((1, 1, tau-1)).to(q.device)
+    qm = -float('inf') * torch.ones((1, 1, tau - 1)).to(q.device)
     qp = 10000.0 * torch.ones((1, 1, tau - 1)).to(q.device)  #
     l = -F.max_pool1d(torch.cat((qm, -q), 2), tau, stride=1)
     m = F.avg_pool1d(torch.cat((q * torch.exp(-q), qp * torch.exp(-qp)), 2), tau, stride=1)
@@ -73,7 +64,6 @@ def TP(q, tau=12, beta=0.5):
 
 class VSFA(nn.Module):
     def __init__(self, input_size=4096, reduced_size=128, hidden_size=32):
-
         super(VSFA, self).__init__()
         self.hidden_size = hidden_size
         self.ann = ANN(input_size, reduced_size, 1)
@@ -99,10 +89,10 @@ class VSFA(nn.Module):
 if __name__ == "__main__":
     parser = ArgumentParser(description='"VSFA: Quality Assessment of In-the-Wild Videos')
     parser.add_argument("--seed", type=int, default=19920517)
-    parser.add_argument('--lr', type=float, default=0.00001,
+    parser.add_argument('--lr', type=float, default=0.0001,
                         help='learning rate (default: 0.00001)')
-    parser.add_argument('--batch_size', type=int, default=16,
-                        help='input batch size for training (default: 16)')
+    parser.add_argument('--batch_size', type=int, default=64,
+                        help='input batch size for training (default: 64)')
     parser.add_argument('--epochs', type=int, default=2000,
                         help='number of epochs to train (default: 2000)')
 
@@ -130,7 +120,7 @@ if __name__ == "__main__":
                         help='flag whether to disable GPU')
     args = parser.parse_args()
 
-    args.decay_interval = int(args.epochs/10)
+    args.decay_interval = int(args.epochs / 10)
     args.decay_ratio = 0.8
 
     torch.manual_seed(args.seed)  #
@@ -150,12 +140,16 @@ if __name__ == "__main__":
     if args.database == 'LIVE-Qualcomm':
         features_dir = 'CNN_features_LIVE-Qualcomm/'
         datainfo = 'data/LIVE-Qualcomminfo.mat'
+    if args.database == 'LIVE-VQC':
+        features_dir = 'CNN_features_LIVE-VQC/'
+        datainfo = 'data/LIVE-VQCinfo.mat'
 
     print('EXP ID: {}'.format(args.exp_id))
     print(args.database)
     print(args.model)
 
     device = torch.device("cuda" if not args.disable_gpu and torch.cuda.is_available() else "cpu")
+    print(device)
 
     Info = h5py.File(datainfo, 'r')  # index, ref_ids
     index = Info['index']
@@ -180,7 +174,7 @@ if __name__ == "__main__":
         test_loader = torch.utils.data.DataLoader(dataset=test_dataset)
 
     model = VSFA().to(device)  #
-
+    # param = np.load('VSFA-CVD2014-EXP0.npy')   # 加载上一次训练的中间结果
 
     if not os.path.exists('models'):
         os.makedirs('models')
@@ -190,10 +184,13 @@ if __name__ == "__main__":
     save_result_file = 'results/{}-{}-EXP{}'.format(args.model, args.database, args.exp_id)
 
     if not args.disable_visualization:  # Tensorboard Visualization
-        writer = SummaryWriter(log_dir='{}/EXP{}-{}-{}-{}-{}-{}-{}'
-                               .format(args.log_dir, args.exp_id, args.database, args.model,
-                                       args.lr, args.batch_size, args.epochs,
-                                       datetime.datetime.now().strftime("%I:%M%p on %B %d, %Y")))
+        LogDir = '{}/{}/EXP{}-{}-{}-{}-{}-{}'.format(args.log_dir, args.database, args.exp_id,  args.model,
+                                                     args.lr, args.batch_size, args.epochs,
+                                                     datetime.datetime.now().strftime("%I:%M%p on %B %d,%Y"))
+        LogDir = LogDir.replace(":", "")
+        writer = SummaryWriter(log_dir=LogDir)
+
+    # model.load_state_dict(torch.load(trained_model_file))   # 加载上次训练参数
 
     criterion = nn.L1Loss()  # L1 loss
     optimizer = Adam(model.parameters(), lr=args.lr, weight_decay=args.weight_decay)
@@ -231,7 +228,7 @@ if __name__ == "__main__":
         val_loss = L / (i + 1)
         val_PLCC = stats.pearsonr(y_pred, y_val)[0]
         val_SROCC = stats.spearmanr(y_pred, y_val)[0]
-        val_RMSE = np.sqrt(((y_pred-y_val) ** 2).mean())
+        val_RMSE = np.sqrt(((y_pred - y_val) ** 2).mean())
         val_KROCC = stats.stats.kendalltau(y_pred, y_val)[0]
 
         # Test
@@ -251,7 +248,7 @@ if __name__ == "__main__":
             test_loss = L / (i + 1)
             PLCC = stats.pearsonr(y_pred, y_test)[0]
             SROCC = stats.spearmanr(y_pred, y_test)[0]
-            RMSE = np.sqrt(((y_pred-y_test) ** 2).mean())
+            RMSE = np.sqrt(((y_pred - y_test) ** 2).mean())
             KROCC = stats.stats.kendalltau(y_pred, y_test)[0]
 
         if not args.disable_visualization:  # record training curves
@@ -299,7 +296,7 @@ if __name__ == "__main__":
         test_loss = L / (i + 1)
         PLCC = stats.pearsonr(y_pred, y_test)[0]
         SROCC = stats.spearmanr(y_pred, y_test)[0]
-        RMSE = np.sqrt(((y_pred-y_test) ** 2).mean())
+        RMSE = np.sqrt(((y_pred - y_test) ** 2).mean())
         KROCC = stats.stats.kendalltau(y_pred, y_test)[0]
         print("Test results: test loss={:.4f}, SROCC={:.4f}, KROCC={:.4f}, PLCC={:.4f}, RMSE={:.4f}"
               .format(test_loss, SROCC, KROCC, PLCC, RMSE))
